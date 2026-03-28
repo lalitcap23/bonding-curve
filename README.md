@@ -1,2 +1,0 @@
-# bonidng-curve-
-# bonidng-curve-
