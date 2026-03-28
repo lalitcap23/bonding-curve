@@ -1,0 +1,1 @@
+// withdraw_fees: Admin transfers protocol fees (e.g., 0.5% per swap) from curve's SOL vault to their wallet via SPL CPI, after auth check—essential for revenue without trapping funds.

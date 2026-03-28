@@ -16,6 +16,6 @@ pub mod bonding_curve {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+        initi_config::handler(ctx)
     }
 }

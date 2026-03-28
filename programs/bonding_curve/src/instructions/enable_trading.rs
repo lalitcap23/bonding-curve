@@ -1,0 +1,1 @@
+// enable_trading: Admin sets trading_enabled=true or launch_slot, blocking swap until ready—prevents sniper bots, ensures fair launch timing, and allows final checks before opening trading on the bonding curve.

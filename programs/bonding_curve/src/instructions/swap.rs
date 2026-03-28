@@ -1,0 +1,1 @@
+// Admin transfers protocol fees (e.g., 0.5% per swap) from curve's SOL vault to their wallet via SPL CPI, ensuring continuous revenue without needing to close the curve or withdraw liquidity.
