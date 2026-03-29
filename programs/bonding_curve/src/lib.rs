@@ -38,7 +38,7 @@ pub mod bonding_curve {
         ctx.accounts.process(bump_bonding_curve)
     }
 
-    // ── Token / Curve Lifecycle ───────────────────────────────────────────
+    //Token / Curve Lifecycle 
 
     /// Create a new token mint + bonding curve PDA and seed it with the full supply.
     pub fn launch(
