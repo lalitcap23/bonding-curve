@@ -16,7 +16,7 @@ declare_id!("8QZyPMwm2tMo35mDVXrWYTEYrXeRn7VEYKycnTiiU6P3");
 pub mod bonding_curve {
     use super::*;
 
-    // ── Admin / Configuration ─────────────────────────────────────────────
+    //  Admin / Configuration 
 
     /// Initialize or update the global protocol config (admin-only).
     pub fn configure(ctx: Context<Configure>, new_config: state::ConfigSettings) -> Result<()> {
@@ -63,6 +63,7 @@ pub mod bonding_curve {
     }
 
     /// Migrate a completed curve's liquidity to a Raydium CLMM pool.
+    #[cfg(feature = "migration")]
     pub fn migrate(ctx: Context<Migrate>) -> Result<()> {
         Migrate::process(ctx)
     }
