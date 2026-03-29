@@ -31,6 +31,11 @@ Once a bonding curve reaches its hard `TARGET_SOL_AMOUNT` limit (e.g., 42 SOL), 
 - A standard Raydium liquidity pool is initialized on the fly.
 - Note: This functionality is gated using the Cargo `migration` feature flag to keep baseline builds light and clean without Raydium dependencies.
 
+### 6. Admin Protocol Controls
+The protocol gives specific rights to the global authority to manage active bonding curves safely:
+- **`enable_trading`**: By default, new bonding curves are created with trading **disabled**. The protocol admin uses this instruction to flip the `is_trading_enabled` boolean to true (or false to pause). This protects against bot sniping at launch and allows the admin to decide the exact moment trading goes live. Swaps are cryptographically hard-blocked if this is false.
+- **`withdraw_fees`**: As trades generate protocol fees (denominated in SOL), these lamports are securely held inside the `BondingCurve` PDA. At any point, the admin can call this instruction to safely siphon out the profit to a designated `fee_recipient` wallet. The instruction uses strict math to leave the exact rent-exempt minimum inside the PDA, guaranteeing the account isn't wiped and the curve state never bricks.
+
 ---
 
 ## Instructions Overview
