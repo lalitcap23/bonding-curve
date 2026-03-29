@@ -34,7 +34,7 @@ pub struct Migrate<'info> {
     #[account(mut)]
     pub token_mint: Account<'info, Mint>,
 
-    /// CHECK: WSOL mint
+    /// CHECK: WSOL mint account
     pub wsol_mint: Account<'info, Mint>,
 
     #[account(
@@ -44,7 +44,7 @@ pub struct Migrate<'info> {
     )]
     pub curve_token_account: Account<'info, TokenAccount>,
 
-    /// CHECK: Native SOL account owned by bonding curve
+    /// CHECK: Curve-owned SOL account
     #[account(
         mut,
         constraint = *curve_sol_account.owner == bonding_curve.key(),
@@ -52,7 +52,7 @@ pub struct Migrate<'info> {
     )]
     pub curve_sol_account: AccountInfo<'info>,
 
-    /// CHECK: Pool state account to be created
+    /// CHECK: Raydium pool state (created here)
     #[account(
         mut,
         seeds = [
@@ -66,11 +66,11 @@ pub struct Migrate<'info> {
     )]
     pub pool_state: UncheckedAccount<'info>,
 
-    /// CHECK: Pool observation state account
+    /// CHECK: Pool observation state
     #[account(mut)]
     pub observation_state: UncheckedAccount<'info>,
 
-    /// CHECK: Token vault for WSOL
+    /// CHECK: WSOL vault
     #[account(
         mut,
         seeds = [
@@ -83,7 +83,7 @@ pub struct Migrate<'info> {
     )]
     pub token_vault_0: UncheckedAccount<'info>,
 
-    /// CHECK: Token vault for project token
+    /// CHECK: Project token vault
     #[account(
         mut,
         seeds = [
@@ -96,7 +96,7 @@ pub struct Migrate<'info> {
     )]
     pub token_vault_1: UncheckedAccount<'info>,
 
-    /// CHECK: Initialize an account to store if a tick array is initialized
+    /// CHECK: Tick-array bitmap account
     #[account(
         mut,
         seeds = [
@@ -108,11 +108,11 @@ pub struct Migrate<'info> {
     )]
     pub tick_array_bitmap: UncheckedAccount<'info>,
 
-    /// CHECK: Fee recipient account
+    /// CHECK: Fee recipient
     #[account(mut)]
     pub fee_recipient: AccountInfo<'info>,
 
-    /// CHECK: Raydium program state account
+    /// CHECK: Raydium AMM config
     pub amm_config: Box<Account<'info, AmmConfig>>,
 
     pub token_program: Program<'info, Token>,
@@ -126,17 +126,17 @@ impl<'info> Migrate<'info> {
         let bonding_curve = &mut ctx.accounts.bonding_curve;
         let config = &ctx.accounts.config;
         
-        // Verify authority
+        // Authorize caller
         require!(
             config.authority == ctx.accounts.authority.key(),
             SwifeyError::UnauthorizedAddress
         );
 
-        // Calculate amounts and fees
+        // Read balances
         let sol_balance = ctx.accounts.curve_sol_account.lamports();
         let token_balance = ctx.accounts.curve_token_account.amount;
         
-        // Calculate migration fee
+        // Compute migration fee
         let migration_fee = sol_balance
             .checked_mul(config.migration_fee_percentage as u64)
             .ok_or(SwifeyError::MathOverflow)?
@@ -148,7 +148,7 @@ impl<'info> Migrate<'info> {
             .ok_or(SwifeyError::InsufficientSolBalance)?;
 
         // Create Raydium pool
-        let init_sqrt_price = tick_math::get_sqrt_price_at_tick(0)?; // Start at tick 0 for 1:1 price
+        let init_sqrt_price = tick_math::get_sqrt_price_at_tick(0)?; // Tick 0 ~= 1:1 start price
         let open_time = Clock::get()?.unix_timestamp as u64;
         
         let create_pool_accounts = raydium_amm_v3::cpi::accounts::CreatePool {
@@ -178,7 +178,7 @@ impl<'info> Migrate<'info> {
             open_time,
         )?;
 
-        // Get signer seeds for PDA operations
+        // PDA signer seeds
         let bump = ctx.bumps.bonding_curve;
         let token_key = ctx.accounts.token_mint.key();
         let seeds = BondingCurve::get_signer(
@@ -187,7 +187,7 @@ impl<'info> Migrate<'info> {
         );
         let signer_seeds = &[&seeds[..]];
     
-        // Transfer migration fee to fee recipient
+        // Send migration fee
         sol_transfer_with_signer(
             &ctx.accounts.curve_sol_account.to_account_info(),
             &ctx.accounts.fee_recipient,
@@ -196,26 +196,26 @@ impl<'info> Migrate<'info> {
             migration_fee,
         )?;
     
-        // Transfer remaining SOL to Raydium pool
+        // Send remaining SOL
         sol_transfer_with_signer(
             &ctx.accounts.curve_sol_account.to_account_info(),
-            &ctx.accounts.token_vault_0.to_account_info(), // Transfer to WSOL vault
+            &ctx.accounts.token_vault_0.to_account_info(), // WSOL vault
             &ctx.accounts.system_program,
             signer_seeds,
             remaining_sol,
         )?;
     
-        // Transfer tokens to Raydium pool
+        // Send tokens
         token_transfer_with_signer(
             &ctx.accounts.curve_token_account.to_account_info(),
             &bonding_curve.to_account_info(),
-            &ctx.accounts.token_vault_1.to_account_info(), // Transfer to token vault
+            &ctx.accounts.token_vault_1.to_account_info(), // Token vault
             &ctx.accounts.token_program.to_account_info(),
             signer_seeds,
             token_balance,
         )?;
     
-        // Mark as migrated
+        // Mark migrated
         bonding_curve.is_migrated = true;
     
         emit!(MigrationCompleted{

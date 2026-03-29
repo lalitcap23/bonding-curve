@@ -1,4 +1,4 @@
-// Admin transfers protocol fees (e.g., 0.5% per swap) from curve's SOL vault to their wallet via SPL CPI, ensuring continuous revenue without needing to close the curve or withdraw liquidity.
+// swap: buy or sell on the bonding curve.
 
 use crate::{
     errors::SwifeyError,
@@ -20,7 +20,7 @@ pub struct Swap<'info> {
     #[account(seeds = [Config::SEED_PREFIX.as_bytes()], bump)]
     global_config: Box<Account<'info, Config>>,
 
-    /// CHECK: This account is verified by through the global config constraint
+    /// CHECK: Verified by global_config constraint
     #[account(mut, constraint = global_config.fee_recipient == fee_recipient.key() @SwifeyError::IncorrectFeeRecipient)]
     fee_recipient: AccountInfo<'info>,
 
@@ -68,7 +68,7 @@ impl<'info> Swap<'info> {
                 &self.token_program.to_account_info()
             )?;
         } else if direction == 1 {
-            //  sell - swap token for sol
+            // Sell: token -> SOL
             bonding_curve.sell(
                 &self.token_mint,
                 &self.user,

@@ -1,12 +1,10 @@
-// Migrations are an early feature. Currently, they're nothing more than this
-// single deploy script that's invoked from the CLI, injecting a provider
-// configured from the workspace's Anchor.toml.
+// CLI deploy hook with provider from Anchor.toml.
 
 import * as anchor from "@coral-xyz/anchor";
 
 module.exports = async function (provider: anchor.AnchorProvider) {
-  // Configure client to use the provider.
+  // Use injected provider.
   anchor.setProvider(provider);
 
-  // Add your deploy script here.
+  // Add deploy logic.
 };

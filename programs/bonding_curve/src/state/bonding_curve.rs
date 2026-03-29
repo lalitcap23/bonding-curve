@@ -9,24 +9,24 @@ use crate::utils::{
 
 #[account]
 pub struct BondingCurve {
-    //Virtual reserves on the curve
+    // Virtual reserves
     pub virtual_token_reserve: u64,
     pub virtual_sol_reserve: u64,
 
-    //Real reserves on the curve
+    // Real reserves
     pub real_token_reserve: u64,
     pub real_sol_reserve: u64,
 
-    //Token total supply
+    // Total token supply
     pub token_total_supply: u64,
 
-    //Is the curve completed
+    // Curve completion flag
     pub is_completed: bool,
 
-    // New field to track if funds are migrated to Raydium
+    // Migration status
     pub is_migrated: bool,
 
-    // Reserved field for padding
+    // Padding
     pub reserved: [u8; 8]
 }
 
@@ -34,7 +34,7 @@ impl<'info> BondingCurve {
     pub const SEED_PREFIX: &'static str = "bonding_curve";
     pub const LEN: usize = 8 * 5 + 1 + 1 + 8;
 
-    //Get signer for bonding curve PDA
+    // PDA signer seeds
     pub fn get_signer<'a>(mint: &'a Pubkey, bump: &'a u8) -> [&'a [u8]; 3] {
         [
             Self::SEED_PREFIX.as_bytes(),
@@ -43,7 +43,7 @@ impl<'info> BondingCurve {
         ]
     }
 
-    //Update reserves
+    // Update reserves
     pub fn update_reserves(&mut self, reserve_lamport: u64, reserve_token: u64) -> Result<bool> {
         self.virtual_sol_reserve = reserve_lamport;
         self.virtual_token_reserve = reserve_token;
@@ -51,39 +51,39 @@ impl<'info> BondingCurve {
         Ok(true)
     }
 
-    // Swap sol for tokens
+    // Buy: SOL -> token
     pub fn buy(
         &mut self,
-        token_mint: &Account<'info, Mint>,  // Token mint address
-        curve_limit: u64,                   // Bonding Curve Limit
-        user: &Signer<'info>,               // User address for buyer
-        curve_pda: &mut AccountInfo<'info>, // Bonding Curve PDA
-        fee_recipient: &mut AccountInfo<'info>, // Team wallet address to get fees
-        user_ata: &mut AccountInfo<'info>,  // Associated token account for user
-        curve_ata: &AccountInfo<'info>,     // Associated token account for bonding curve
-        amount_in: u64,                     // Amount of SOL to pay
-        min_amount_out: u64,                // Minimum amount of tokens to receive
-        fee_percentage: f64,                // Fee percentage for buying on the bonding curve
-        curve_bump: u8,                     // Bump for the bonding curve PDA
+        token_mint: &Account<'info, Mint>,  // Token mint
+        curve_limit: u64,                   // Curve limit
+        user: &Signer<'info>,               // Buyer
+        curve_pda: &mut AccountInfo<'info>, // Curve PDA
+        fee_recipient: &mut AccountInfo<'info>, // Fee recipient
+        user_ata: &mut AccountInfo<'info>,  // User ATA
+        curve_ata: &AccountInfo<'info>,     // Curve ATA
+        amount_in: u64,                     // SOL in
+        min_amount_out: u64,                // Min token out
+        fee_percentage: f64,                // Buy fee %
+        curve_bump: u8,                     // Curve bump
         system_program: &AccountInfo<'info>, // System program
         token_program: &AccountInfo<'info>,
     ) -> Result<bool> {
         let (amount_out, fee_amount) =
             self.calculate_amount_out(amount_in, 0, fee_percentage)?;
 
-        // Check if the amount out is greater than the minimum amount out
+        // Enforce slippage limit
         require!(
             amount_out >= min_amount_out,
             SwifeyError::InsufficientAmountOut
         );
 
-        // Transfer fee to the team wallet
+        // Send fee
         sol_transfer_from_user(&user, fee_recipient, system_program, fee_amount)?;
 
-        // Transfer adjusted amount to curve
+        // Send net SOL to curve
         sol_transfer_from_user(&user, curve_pda, system_program, amount_in - fee_amount)?;
 
-        // Transfer tokens from PDA to user
+        // Send tokens to user
         token_transfer_with_signer(
             curve_ata,
             curve_pda,
@@ -93,7 +93,7 @@ impl<'info> BondingCurve {
             amount_out,
         )?;
 
-        // Calculate new reserves
+        // Recompute reserves
         let new_token_reserves = self
             .virtual_token_reserve
             .checked_sub(amount_out)
@@ -104,7 +104,7 @@ impl<'info> BondingCurve {
             .checked_add(amount_in - fee_amount)
             .ok_or(SwifeyError::InvalidReserves)?;
 
-        //Update reserves on the curve
+        // Persist reserves
         self.update_reserves(new_sol_reserves, new_token_reserves)?;
 
         emit!(TokenPurchased {
@@ -116,7 +116,7 @@ impl<'info> BondingCurve {
             price: new_sol_reserves / new_token_reserves
         });
 
-        //Return true if curve reached its limit
+        // Mark completed at curve limit
         if new_sol_reserves >= curve_limit {
             self.is_completed = true;
             emit!(CurveCompleted {
@@ -127,11 +127,11 @@ impl<'info> BondingCurve {
             return Ok(true);
         }
 
-        //Return false if curve did not reach its limit
+        // Not completed yet
         Ok(false)
     }
 
-    // Swap tokens for sol
+    // Sell: token -> SOL
     pub fn sell(
         &mut self,
         token_mint: &Account<'info, Mint>,
@@ -199,7 +199,7 @@ impl<'info> BondingCurve {
         Ok(())
     }
 
-    //Calculate adjusted amount out and fee amount
+    // Compute output and fee
     pub fn calculate_amount_out(
         &mut self,
         amount_in: u64,

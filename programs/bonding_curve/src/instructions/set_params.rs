@@ -1,1 +1,1 @@
-//set_params lets the admin dynamically update bonding curve parameters like fees, volatility, or thresholds after launch, without redeploying the program
+// set_params: update curve params after launch.
