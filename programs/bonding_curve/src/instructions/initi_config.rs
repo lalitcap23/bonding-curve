@@ -1,4 +1,4 @@
-use crate::{errors::SwifeyError, states::{Config, ConfigSettings}};
+use crate::{errors::SwifeyError, state::{Config, ConfigSettings}};
 use anchor_lang::{prelude::*, system_program};
 
 #[derive(Accounts)]

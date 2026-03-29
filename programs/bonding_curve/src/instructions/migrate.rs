@@ -1,8 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount, Mint};
-use crate::states::{BondingCurve, Config};
+use crate::state::{BondingCurve, Config};
 use crate::errors::SwifeyError;
 use crate::utils::{sol_transfer_with_signer, token_transfer_with_signer, MigrationCompleted};
+
+#[cfg(feature = "migration")]
 use raydium_amm_v3::{
     self,
     states::{AmmConfig, POOL_SEED, POOL_TICK_ARRAY_BITMAP_SEED, POOL_VAULT_SEED},

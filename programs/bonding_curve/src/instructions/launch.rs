@@ -1,6 +1,6 @@
 use crate::{
     constants::TOKEN_DECIMAL,
-    states::{BondingCurve, Config}
+    state::{BondingCurve, Config}
 };
 
 use anchor_lang::{prelude::*, system_program, solana_program::sysvar};
@@ -85,6 +85,8 @@ impl<'info> Launch<'info> {
         bonding_curve.real_sol_reserve = 0;
         bonding_curve.token_total_supply = global_config.total_token_supply;
         bonding_curve.is_completed = false;
+        bonding_curve.is_migrated = false;
+        bonding_curve.is_trading_enabled = false; // Off until authority calls enable_trading
 
         let signer_seeds: &[&[&[u8]]] = &[&[Config::SEED_PREFIX.as_bytes(), &[bump_config]]];
 

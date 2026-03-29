@@ -9,30 +9,33 @@ use crate::utils::{
 
 #[account]
 pub struct BondingCurve {
-    // Virtual reserves
+    // Synthetic reserves used by the AMM pricing formula
     pub virtual_token_reserve: u64,
     pub virtual_sol_reserve: u64,
 
-    // Real reserves
+    // Actual balances locked on-chain in the curve
     pub real_token_reserve: u64,
     pub real_sol_reserve: u64,
 
-    // Total token supply
+    // Fixed maximum supply minted at launch
     pub token_total_supply: u64,
 
-    // Curve completion flag
+    // Set to true when the SOL cap (curve_limit) is reached
     pub is_completed: bool,
 
-    // Migration status
+    // Set to true after successful Raydium pool migration
     pub is_migrated: bool,
 
-    // Padding
+    // Gate flag – swaps blocked until authority calls enable_trading
+    pub is_trading_enabled: bool,
+
+    // Reserved bytes for forward compatibility
     pub reserved: [u8; 8]
 }
 
 impl<'info> BondingCurve {
     pub const SEED_PREFIX: &'static str = "bonding_curve";
-    pub const LEN: usize = 8 * 5 + 1 + 1 + 8;
+    pub const LEN: usize = 8 * 5 + 1 + 1 + 1 + 8; // 5×u64 + is_completed + is_migrated + is_trading_enabled + reserved
 
     // PDA signer seeds
     pub fn get_signer<'a>(mint: &'a Pubkey, bump: &'a u8) -> [&'a [u8]; 3] {
@@ -68,6 +71,9 @@ impl<'info> BondingCurve {
         system_program: &AccountInfo<'info>, // System program
         token_program: &AccountInfo<'info>,
     ) -> Result<bool> {
+        // Reject if the authority has not yet enabled trading
+        require!(self.is_trading_enabled, SwifeyError::CurveNotInitialized);
+
         let (amount_out, fee_amount) =
             self.calculate_amount_out(amount_in, 0, fee_percentage)?;
 
@@ -147,6 +153,9 @@ impl<'info> BondingCurve {
         system_program: &AccountInfo<'info>,
         token_program: &AccountInfo<'info>,
     ) -> Result<()> {
+        // Swaps blocked until authority enables trading
+        require!(self.is_trading_enabled, SwifeyError::CurveNotInitialized);
+
         let (amount_out, fee_amount) =
             self.calculate_amount_out(amount_in, 1, fee_percentage)?;
 

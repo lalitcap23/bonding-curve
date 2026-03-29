@@ -2,7 +2,7 @@
 
 use crate::{
     errors::SwifeyError,
-    states::{BondingCurve, Config},
+    state::{BondingCurve, Config},
 };
 
 use anchor_lang::{prelude::*, system_program};
