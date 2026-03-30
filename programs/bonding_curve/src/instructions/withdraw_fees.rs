@@ -1,4 +1,4 @@
-// withdraw_fees: authority drains accumulated SOL fees held by the curve PDA.
+// withdraw_fees: authority drains accumulated SOL fe es held by the curve PDA.
 
 use crate::{errors::SwifeyError, state::{BondingCurve, Config}};
 use crate::utils::sol_transfer_with_signer;
