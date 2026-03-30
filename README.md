@@ -1,4 +1,4 @@
-# Swifey Bonding Curve Protocol
+#  Bonding Curve Protocol
 
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 [![Anchor](https://img.shields.io/badge/Anchor-0.32.1-purple.svg)](https://github.com/coral-xyz/anchor)
